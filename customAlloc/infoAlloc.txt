@@ -16,3 +16,5 @@ otherwise, it will simply append a header freememory at the end of the packet de
 
 the free routine simply changes the status of the header packetmemory from 0 (busy) to 1 (free) and adding sizeof(headerFreeMemory) to the size of the described memory segment, effectively turning the header packetmemory into a header freememory.
 Indeed, a header free memory describes the following memory after the header + the size of the header whereas a header packet memory.size is only the size of the packet. there is no reason behind this choice it just came to be as I wrote the code.
+
+Could most certainly use some X macros...
