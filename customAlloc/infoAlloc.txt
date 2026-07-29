@@ -14,4 +14,5 @@ when adding a packet, the program allocates the mememory by checking the free se
 once it's done, it copies the packet and a header describing the packet at the beginning of the free memory segment. if |freememory| < |packet|+ sizeof(heeaderFreeMemory), then it adds padding to the packet so the headerpacket memory.size will be sizeof(header packet memory) + |packet| + |padding|
 otherwise, it will simply append a header freememory at the end of the packet describing the remaining free memory of the segment. its size can be 0 ofc.
 
-the free routine simply changes the status of the header packetmemory from 0 (busy) to 1 (free) effectively turning the header packetmemory into a header freememory since this is the only difference
+the free routine simply changes the status of the header packetmemory from 0 (busy) to 1 (free) and adding sizeof(headerFreeMemory) to the size of the described memory segment, effectively turning the header packetmemory into a header freememory.
+Indeed, a header free memory describes the following memory after the header + the size of the header whereas a header packet memory.size is only the size of the packet. there is no reason behind this choice it just came to be as I wrote the code.
