@@ -1,3 +1,17 @@
 this program is used to test custom allocation on a preallocated buffer.
 This is meant to be used in the packet capture driver to copy packets on a pre allocated buffer without overlapping each other or corrupt memory. 
 includes a tester
+
+three structures are used: 
+-header free memory (describes free memory)
+-header packet memory (described used memory / packet )
+-packet proper
+
+basically what it does is pre allocate a big fat buffer and zero out its memory.
+a header free memory describing the entire memory buffer is added at the beginning of the buffer, a "STOP" int is added at the end of the buffer.
+when adding a packet, the program allocates the mememory by checking the free segment headers. to mitigate fragmentation, the allocation routine merges all free contiguous (as in following) segments it stumbles upon into one larger segment buffer. it does this by adding up the sizes described by the free memory headers.
+
+once it's done, it copies the packet and a header describing the packet at the beginning of the free memory segment. if |freememory| < |packet|+ sizeof(heeaderFreeMemory), then it adds padding to the packet so the headerpacket memory.size will be sizeof(header packet memory) + |packet| + |padding|
+otherwise, it will simply append a header freememory at the end of the packet describing the remaining free memory of the segment. its size can be 0 ofc.
+
+the free routine simply changes the status of the header packetmemory from 0 (busy) to 1 (free) effectively turning the header packetmemory into a header freememory since this is the only difference
