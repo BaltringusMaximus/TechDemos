@@ -1,0 +1,1 @@
+reg add HKLM\SOFTWARE\Classes\.py /v PerceivedType /t REG_SZ /d text
