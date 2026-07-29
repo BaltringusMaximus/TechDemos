@@ -1,0 +1,3 @@
+this program is used to test custom allocation on a preallocated buffer.
+This is meant to be used in the packet capture driver to copy packets on a pre allocated buffer without overlapping each other or corrupt memory. 
+includes a tester
