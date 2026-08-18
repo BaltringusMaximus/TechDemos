@@ -1,0 +1,7 @@
+Testing custom buffer management in the form of a queue with no memory fragmenting.
+Packets are supposed to be appended after the last one on a previously allocated buffer.
+Instead of walking through a custom heap (cf customAlloc), the offset of the Free Memory where Packets can be appended is stored at the very beginning of the buffer, since they are sorted in
+a FIFO order and elements in the Queue are not supposed to be Freed.
+It allows a time complexity of O(1) when adding a new element to the buffer, instead of O(n) in cutomAlloc, where each element can be retrieved individually and where fragmentation is an issue.
+Once a packet is "generated" by the program, it checks the headerQueue of the queue to know if it can push a packet at the end of the queue, and where to push it.
+WIP
