@@ -1,9 +1,20 @@
+/*
+INFO: 
+total queue size INCLUDES the queue header size
+when appending a packet to the queue, it checks if there is enough room in the queue by checking the total size minus the offset, the offset starts at sizeof(headerqueue)
+splitBufferIntoSegments takes a big fat buffer and turns it into N queues if bQueue == 1, otherwise it'll simply turn it into N normal bufferinos
+
+TO DO: make a mapping of queue ID - pointer
+*/
+
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include <stdbool.h>
 
-#define sizeBuffer 1000
+#define sizeBuffer 2000
+
 
 typedef struct headerFreeMemory
 {
@@ -41,7 +52,7 @@ void printBufferWithSize(unsigned char* buffer, int size);
 void queueFromBuffer(unsigned char* buffer, unsigned char* queueAddress, int id);
 void packetGenerator(int size, unsigned char** packet);
 void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int sizeOfPacket);
-void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment);
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue);
 //void packetCopyToQueue(unsigned char* packet, unsigned char* queue);
 
 
@@ -93,7 +104,9 @@ void queueFromBuffer(unsigned char* buffer, unsigned char** queueAddress, int id
 	headerAllocatedQueue.totalSize = headerBuffer.size;
 
 	memcpy(buffer, &headerAllocatedQueue, sizeof(headerQueue));
-	*queueAddress = buffer;
+	if (queueAddress != NULL){ *queueAddress = buffer; }
+	else { printf("no queueAddress pointer provided\n"); }
+//	*queueAddress = buffer;
 	return;
 }
 void printBufferWithSize(unsigned char* buffer, int size)
@@ -162,7 +175,7 @@ void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int s
 
 // must be preinitialized buffer USE BEFORE TURNING IT INTO A FUCKING QUEUE
 
-void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment)
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue)
 {
 	headerFreeMemory headerCurrentSegment;
 	memcpy(&headerCurrentSegment, buffer, sizeof(headerCurrentSegment));
@@ -177,6 +190,7 @@ void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment)
 		printf("%p\n", buffer + headerCurrentSegment.offset);
 //		printBufferWithSize(buffer, sizeBuffer);
 		memcpy((buffer + headerCurrentSegment.offset), &headerCurrentSegment, sizeof(headerFreeMemory));
+		if (bQueue == 1) { queueFromBuffer(buffer + headerCurrentSegment.offset, NULL, 0x11 + i); }
 //		printBufferWithSize(buffer, sizeBuffer);
 	}
 	return;
@@ -198,8 +212,10 @@ int main()
 	bufferInit(&pBufferByte, sizeBuffer);
 	printf("Buffer byte  %p\n", pBufferByte);
 	printBufferWithSize(pBufferByte, sizeBuffer);
-	splitBufferIntoSegments(pBufferByte, 5);
+	splitBufferIntoSegments(pBufferByte, 10, 1);
 	printBufferWithSize(pBufferByte, sizeBuffer);
+
+	/*
 	queueFromBuffer(pBufferByte, &pQueueByte,idQueue1);
 	printf("queue address = %p\n", pQueueByte);
 	printBufferWithSize(pBufferByte, sizeBuffer);
@@ -208,5 +224,6 @@ int main()
 	packetAllocAndCopyToQueue(pQueueByte, &packet2, 943);
 	printBufferWithSize(pBufferByte, sizeBuffer);
 	//packetGenerator(10, &pPacket1);
+	*/
 	return 0;
 }
