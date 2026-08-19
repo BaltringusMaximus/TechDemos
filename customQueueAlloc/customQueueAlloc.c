@@ -21,6 +21,7 @@ typedef struct headerPacket
 
 typedef struct headerQueue
 {
+	int id;
 	int totalSize;					//in bytes,
 	int offset;						//where to copy da next element
 	int numberOfElement;			//purely informative to make the struct 12 bytes long
@@ -37,9 +38,10 @@ typedef struct structPacket
 
 void bufferInit(unsigned char** buffer, int size);
 void printBufferWithSize(unsigned char* buffer, int size);
-void queueFromBuffer(unsigned char* buffer, unsigned char* queueAddress);
+void queueFromBuffer(unsigned char* buffer, unsigned char* queueAddress, int id);
 void packetGenerator(int size, unsigned char** packet);
 void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int sizeOfPacket);
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment);
 //void packetCopyToQueue(unsigned char* packet, unsigned char* queue);
 
 
@@ -78,13 +80,14 @@ void bufferInit(unsigned char** buffer, int size)
 	return;
 }
 
-void queueFromBuffer(unsigned char* buffer, unsigned char** queueAddress)
+void queueFromBuffer(unsigned char* buffer, unsigned char** queueAddress, int id)
 {
 	headerQueue headerAllocatedQueue;
 	headerFreeMemory headerBuffer;
 	memcpy(&headerBuffer, buffer, sizeof(headerFreeMemory));
 	memset(&headerAllocatedQueue, 0, sizeof(headerQueue));
 	printf("%d %d %d\n", headerBuffer.isFree, headerBuffer.offset, headerBuffer.size);
+	headerAllocatedQueue.id = id;
 	headerAllocatedQueue.numberOfElement = 0;
 	headerAllocatedQueue.offset = sizeof(headerQueue);
 	headerAllocatedQueue.totalSize = headerBuffer.size;
@@ -157,12 +160,35 @@ void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int s
 	return;
 }
 
+// must be preinitialized buffer USE BEFORE TURNING IT INTO A FUCKING QUEUE
+
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment)
+{
+	headerFreeMemory headerCurrentSegment;
+	memcpy(&headerCurrentSegment, buffer, sizeof(headerCurrentSegment));
+	int totalSize = headerCurrentSegment.size;
+	if (totalSize % numberOfSegment != 0) { printf("can't split da buffer into %d segments cuz the requested number of segments doesn't divide the total size of the buffer supplied\n", numberOfSegment); return; }
+	for (int i = 0; i < numberOfSegment; i++)
+	{
+		headerCurrentSegment.isFree = 1;
+		headerCurrentSegment.offset = ( i * totalSize / numberOfSegment );
+		headerCurrentSegment.size = totalSize / numberOfSegment;
+		printf("%d %d %d\n", headerCurrentSegment.isFree, headerCurrentSegment.offset, headerCurrentSegment.size);
+		printf("%p\n", buffer + headerCurrentSegment.offset);
+//		printBufferWithSize(buffer, sizeBuffer);
+		memcpy((buffer + headerCurrentSegment.offset), &headerCurrentSegment, sizeof(headerFreeMemory));
+//		printBufferWithSize(buffer, sizeBuffer);
+	}
+	return;
+}
 
 int main()
 {
 
 	unsigned char* pBufferByte = NULL;
 	unsigned char* pQueueByte = NULL;
+	int idQueue1 = 0x11;
+	int idQueue2 = 0x12;
 	structPacket packet1;
 	structPacket packet2;
 	memset(&packet1, 0, sizeof(structPacket));
@@ -172,7 +198,9 @@ int main()
 	bufferInit(&pBufferByte, sizeBuffer);
 	printf("Buffer byte  %p\n", pBufferByte);
 	printBufferWithSize(pBufferByte, sizeBuffer);
-	queueFromBuffer(pBufferByte, &pQueueByte);
+	splitBufferIntoSegments(pBufferByte, 5);
+	printBufferWithSize(pBufferByte, sizeBuffer);
+	queueFromBuffer(pBufferByte, &pQueueByte,idQueue1);
 	printf("queue address = %p\n", pQueueByte);
 	printBufferWithSize(pBufferByte, sizeBuffer);
 	packetAllocAndCopyToQueue(pQueueByte, &packet1, 10);
