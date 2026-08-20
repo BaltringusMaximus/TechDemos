@@ -11,10 +11,20 @@ TO DO: make a mapping of queue ID - pointer
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include <stdbool.h>
+#include<stdbool.h>
 
-#define sizeBuffer 2000
+#define sizeBuffer 10000
+#define numberOfQueue 10
 
+typedef struct queueMapping
+{
+	int id;
+	int queueOffset;
+
+	unsigned char* buffer;
+	
+	unsigned char* queueAddress;
+}queueMapping;
 
 typedef struct headerFreeMemory
 {
@@ -52,7 +62,9 @@ void printBufferWithSize(unsigned char* buffer, int size);
 void queueFromBuffer(unsigned char* buffer, unsigned char* queueAddress, int id);
 void packetGenerator(int size, unsigned char** packet);
 void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int sizeOfPacket);
-void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue);
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue, unsigned char* queueMappingArray);
+void printQueueMappingArray(unsigned char* queueMappingArray, int numOfQueue);
+void printQueueMappingArrayReadable(unsigned char* queueMappingArray, int numOfQueue);
 //void packetCopyToQueue(unsigned char* packet, unsigned char* queue);
 
 
@@ -67,7 +79,7 @@ void packetGenerator(int size, unsigned char** packet)
 
 	for (int i = 0; i < size; i++)
 	{
-		*(*packet + i) = i;
+		*(*packet+i)  = i;
 		printf("%llX ", *(*packet + i));
 
 	}
@@ -175,9 +187,11 @@ void packetAllocAndCopyToQueue(unsigned char* queue, structPacket* packet, int s
 
 // must be preinitialized buffer USE BEFORE TURNING IT INTO A FUCKING QUEUE
 
-void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue)
+void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQueue, unsigned char* queueMappingArray)
 {
 	headerFreeMemory headerCurrentSegment;
+	queueMapping* currentQueueMapping = queueMappingArray;
+	printf("currentQueueMapping = %p queueMappingArray = %p\n", currentQueueMapping, queueMappingArray);
 	memcpy(&headerCurrentSegment, buffer, sizeof(headerCurrentSegment));
 	int totalSize = headerCurrentSegment.size;
 	if (totalSize % numberOfSegment != 0) { printf("can't split da buffer into %d segments cuz the requested number of segments doesn't divide the total size of the buffer supplied\n", numberOfSegment); return; }
@@ -191,8 +205,51 @@ void splitBufferIntoSegments(unsigned char* buffer, int numberOfSegment, bool bQ
 //		printBufferWithSize(buffer, sizeBuffer);
 		memcpy((buffer + headerCurrentSegment.offset), &headerCurrentSegment, sizeof(headerFreeMemory));
 		if (bQueue == 1) { queueFromBuffer(buffer + headerCurrentSegment.offset, NULL, 0x11 + i); }
+		if (queueMappingArray != NULL) 
+		{ 
+			currentQueueMapping->id = 0x11 + i; 
+			currentQueueMapping->buffer = buffer;
+			currentQueueMapping->queueAddress = buffer + headerCurrentSegment.offset;
+			currentQueueMapping->queueOffset = headerCurrentSegment.offset;
+			currentQueueMapping = currentQueueMapping + 1; // understand "+ 1*sizeof(queueMapping)" basically, what an odd behaviour
+			printf("currentQueueMapping = %p\n", currentQueueMapping); 
+		}
+		
+		printf("exiting the split function\n");
 //		printBufferWithSize(buffer, sizeBuffer);
 	}
+	
+	return;
+}
+
+void printQueueMappingArray(unsigned char* queueMappingArray, int numOfQueue)
+{
+	
+	for (int j = 0; j < numOfQueue; j++)
+	{
+		for (int i = 0; i < sizeof(queueMapping); i++)
+		{
+			printf("%d ", queueMappingArray[i]);
+		}
+		printf("\n");
+		queueMappingArray += sizeof(queueMapping);
+	}
+
+	return;
+}
+
+void printQueueMappingArrayReadable(unsigned char* queueMappingArray, int numOfQueue)
+{
+	queueMapping* currentQueue = queueMappingArray;
+	printf("list of all registered Queues\n");
+	for (int j = 0; j < numOfQueue; j++)
+	{
+		printf("queue ID = %X\nqueue offset = %d\nqueue address = %p\nbuffer address = %p\n", currentQueue->id, currentQueue->queueOffset, currentQueue->queueAddress, currentQueue->buffer);
+		currentQueue += 1;
+		printf("\n");
+		queueMappingArray += sizeof(queueMapping);
+	}
+
 	return;
 }
 
@@ -203,18 +260,30 @@ int main()
 	unsigned char* pQueueByte = NULL;
 	int idQueue1 = 0x11;
 	int idQueue2 = 0x12;
+	unsigned char* queueMappingArray = NULL;
 	structPacket packet1;
 	structPacket packet2;
 	memset(&packet1, 0, sizeof(structPacket));
 
-
+	queueMappingArray = malloc(numberOfQueue * sizeof(queueMapping));
+	memset(queueMappingArray, 0, numberOfQueue * sizeof(queueMapping));
+	printf("size of queuemappingarray = %d\n", numberOfQueue * sizeof(queueMapping));
+	printQueueMappingArray(queueMappingArray, numberOfQueue);
 	printf("Buffer byte  %p\n", pBufferByte);
 	bufferInit(&pBufferByte, sizeBuffer);
 	printf("Buffer byte  %p\n", pBufferByte);
 	printBufferWithSize(pBufferByte, sizeBuffer);
-	splitBufferIntoSegments(pBufferByte, 10, 1);
+	splitBufferIntoSegments(pBufferByte, numberOfQueue, 1, queueMappingArray);
+	printf("back to main\n");
+	printQueueMappingArray(queueMappingArray, numberOfQueue);
+	printQueueMappingArrayReadable(queueMappingArray, numberOfQueue);
 	printBufferWithSize(pBufferByte, sizeBuffer);
+	printf("back to main again\n");
+	//packetGenerator(11, &packet1.packetData);
 
+	
+	
+	
 	/*
 	queueFromBuffer(pBufferByte, &pQueueByte,idQueue1);
 	printf("queue address = %p\n", pQueueByte);
